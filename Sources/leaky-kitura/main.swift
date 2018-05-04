@@ -3,6 +3,10 @@ import Credentials
 import CredentialsHTTP
 import SwiftyJSON
 import Dispatch
+import LoggerAPI
+import HeliumLogger
+
+Log.logger = HeliumLogger()
 
 let credentials = Credentials()
 let users = ["user": "password"]
@@ -18,11 +22,15 @@ credentials.register(plugin: basicCredentials)
 let router = Router()
 let status = JSON(["status": "OK"]).rawString(options: [])!
 
-//#if os(Linux)
-//let sslConfig = SSLConfig(withCACertificateFilePath: pemCertificateFile, usingCertificateFile: pemCertificateFile, withKeyFile: pemKeyFile, usingSelfSignedCerts: false)
-//#else
-//let sslConfig = SSLConfig(withChainFilePath: pfxCertificateAndKeyFile, withPassword: pfxCertificateAndKeyFilePassword, usingSelfSignedCerts: false)
-//#endif
+#if os(Linux)
+let pemKeyFile = "key.pem"
+let pemCertificateFile = "cert.pem"
+let sslConfig = SSLConfig(withCACertificateFilePath: pemCertificateFile, usingCertificateFile: pemCertificateFile, withKeyFile: pemKeyFile, usingSelfSignedCerts: false)
+#else
+let pfxCertificateAndKeyFile = "cert.pfx"
+let pfxCertificateAndKeyFilePassword = "password"
+let sslConfig = SSLConfig(withChainFilePath: pfxCertificateAndKeyFile, withPassword: pfxCertificateAndKeyFilePassword, usingSelfSignedCerts: true)
+#endif
 
 router.all("/", middleware: credentials)
 router.get("/") {
@@ -31,7 +39,7 @@ router.get("/") {
     next()
 }
 
-Kitura.addHTTPServer(onPort: 8080, with: router)
+Kitura.addHTTPServer(onPort: 8080, with: router, withSSL: sslConfig)
 Kitura.start()
 
 dispatchMain()
